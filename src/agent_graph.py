@@ -4,6 +4,8 @@ from typing import TypedDict
 from src.optimizer import optimize_route
 from dotenv import load_dotenv
 import requests
+from src.logger import get_logger
+logger = get_logger("AGENT_GRAPH")
 load_dotenv()
 
 
@@ -19,6 +21,7 @@ class AgentState(TypedDict):
     response: str
 
 def planner_agent(state: AgentState):
+    logger.info(f"User query: {state['query']}")
     prompt = f"""
     Classify the user intent into one of:
     - analytics

@@ -1,6 +1,9 @@
 from ortools.constraint_solver import pywrapcp, routing_enums_pb2
+from src.logger import get_logger
+logger = get_logger("ROUTE_OPTIMIZER")
 
 def optimize_route(distance_matrix, location_names):
+    logger.info("Starting route optimization")
     manager = pywrapcp.RoutingIndexManager(
         len(distance_matrix), 1, 0
     )
@@ -35,7 +38,8 @@ def optimize_route(distance_matrix, location_names):
         index = next_index
 
     route.append(location_names[manager.IndexToNode(index)])
-
+    logger.info(f"Route found: {route}")
+    logger.info(f"Total distance: {total_distance}")
     return {
         "route": route,
         "total_distance_km": total_distance

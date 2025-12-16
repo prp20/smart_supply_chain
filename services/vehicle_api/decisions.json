@@ -1,0 +1,12 @@
+[
+  {
+    "vehicle_id": "V1",
+    "decision": "Rerouted due to traffic",
+    "confidence": 0.91
+  },
+  {
+    "vehicle_id": "V2",
+    "decision": "Delayed pickup due to weather",
+    "confidence": 0.85
+  }
+]

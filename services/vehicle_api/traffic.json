@@ -1,0 +1,26 @@
+[
+  {
+    "segment_id": "T1",
+    "severity": "low",
+    "coordinates": [
+      [12.972, 77.595],
+      [12.974, 77.598]
+    ]
+  },
+  {
+    "segment_id": "T2",
+    "severity": "medium",
+    "coordinates": [
+      [12.976, 77.600],
+      [12.978, 77.603]
+    ]
+  },
+  {
+    "segment_id": "T3",
+    "severity": "high",
+    "coordinates": [
+      [12.979, 77.605],
+      [12.982, 77.608]
+    ]
+  }
+]
