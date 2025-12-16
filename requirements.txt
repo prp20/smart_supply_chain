@@ -1,0 +1,9 @@
+pandas
+scikit-learn
+streamlit
+langchain
+openai
+ortools
+joblib
+langchain-groq
+python-dotenv
