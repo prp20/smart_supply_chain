@@ -1,7 +1,6 @@
-from ortools.constraint_solver import routing_enums_pb2
-from ortools.constraint_solver import pywrapcp
+from ortools.constraint_solver import pywrapcp, routing_enums_pb2
 
-def optimize_route(distance_matrix):
+def optimize_route(distance_matrix, location_names):
     manager = pywrapcp.RoutingIndexManager(
         len(distance_matrix), 1, 0
     )
@@ -14,8 +13,8 @@ def optimize_route(distance_matrix):
             manager.IndexToNode(to_index)
         ]
 
-    transit_callback_index = routing.RegisterTransitCallback(distance_callback)
-    routing.SetArcCostEvaluatorOfAllVehicles(transit_callback_index)
+    transit_callback = routing.RegisterTransitCallback(distance_callback)
+    routing.SetArcCostEvaluatorOfAllVehicles(transit_callback)
 
     search_params = pywrapcp.DefaultRoutingSearchParameters()
     search_params.first_solution_strategy = (
@@ -26,9 +25,18 @@ def optimize_route(distance_matrix):
 
     route = []
     index = routing.Start(0)
-    while not routing.IsEnd(index):
-        route.append(manager.IndexToNode(index))
-        index = solution.Value(routing.NextVar(index))
-    route.append(manager.IndexToNode(index))
+    total_distance = 0
 
-    return route
+    while not routing.IsEnd(index):
+        node = manager.IndexToNode(index)
+        route.append(location_names[node])
+        next_index = solution.Value(routing.NextVar(index))
+        total_distance += routing.GetArcCostForVehicle(index, next_index, 0)
+        index = next_index
+
+    route.append(location_names[manager.IndexToNode(index)])
+
+    return {
+        "route": route,
+        "total_distance_km": total_distance
+    }

@@ -1,6 +1,7 @@
 from langchain_groq import ChatGroq
 from langgraph.graph import StateGraph, END
 from typing import TypedDict
+from src.optimizer import optimize_route
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -44,9 +45,22 @@ def analytics_agent(state: AgentState):
     )
     return state
 
-def optimization_agent(state: AgentState):
+def optimization_agent(state):
+    distance_matrix = [
+        [0, 10, 15, 20],
+        [10, 0, 35, 25],
+        [15, 35, 0, 30],
+        [20, 25, 30, 0],
+    ]
+
+    locations = ["Warehouse", "Hub A", "Hub B", "Customer"]
+
+    result = optimize_route(distance_matrix, locations)
+
     state["response"] = (
-        "🚚 Optimized route: Warehouse → Hub A → Hub C → Customer"
+        f"🚚 Optimized Route:\n"
+        f"{' → '.join(result['route'])}\n\n"
+        f"📏 Total Distance: {result['total_distance_km']} km"
     )
     return state
 
