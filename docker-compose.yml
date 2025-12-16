@@ -1,0 +1,28 @@
+version: "3.9"
+
+services:
+  logistics-app:
+    build: .
+    ports:
+      - "8501:8501"
+    environment:
+      - GROQ_API_KEY=${GROQ_API_KEY}
+    depends_on:
+      - vehicle-api
+      - weather-api
+      - traffic-api
+
+  vehicle-api:
+    build: ./services/vehicle_api
+    ports:
+      - "8001:8001"
+
+  weather-api:
+    build: ./services/weather_api
+    ports:
+      - "8002:8002"
+
+  traffic-api:
+    build: ./services/traffic_api
+    ports:
+      - "8003:8003"
