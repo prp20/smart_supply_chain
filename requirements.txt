@@ -7,3 +7,4 @@ ortools
 joblib
 langchain-groq
 python-dotenv
+fastapi

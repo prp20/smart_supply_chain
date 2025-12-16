@@ -3,6 +3,7 @@ from langgraph.graph import StateGraph, END
 from typing import TypedDict
 from src.optimizer import optimize_route
 from dotenv import load_dotenv
+import requests
 load_dotenv()
 
 
@@ -38,11 +39,18 @@ def planner_agent(state: AgentState):
 
     return state
 
-def analytics_agent(state: AgentState):
-    # Example response
-    state["response"] = (
-        "📊 Based on historical data, 18% of shipments are likely to be delayed."
-    )
+def analytics_agent(state):
+    vehicle = requests.get("http://vehicle-api:8001/vehicle/status").json()
+    weather = requests.get("http://weather-api:8002/weather/current").json()
+    traffic = requests.get("http://traffic-api:8003/traffic/status").json()
+
+    state["response"] = f"""
+        🚚 Vehicle ETA: {vehicle['eta_minutes']} mins
+        🌡 Temperature: {weather['temperature_c']}°C
+        🚦 Traffic: {traffic['congestion_level']}
+
+        AI Insight: Expect moderate delay risk due to traffic & weather.
+        """
     return state
 
 def optimization_agent(state):
