@@ -1,0 +1,16 @@
+version: "3.9"
+
+services:
+  vehicle-simulator:
+    build: ./services/vehicle_simulator
+    volumes:
+      - vehicle_data:/data
+
+  traffic-simulator:
+    build: ./services/traffic_simulator
+    volumes:
+      - traffic_data:/data
+
+volumes:
+  vehicle_data:
+  traffic_data:
