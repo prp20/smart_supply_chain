@@ -1,0 +1,17 @@
+[
+  {
+    "time": "10:30",
+    "type": "traffic",
+    "message": "Heavy congestion detected near MG Road"
+  },
+  {
+    "time": "10:32",
+    "type": "ai",
+    "message": "AI recommends rerouting Vehicle V2"
+  },
+  {
+    "time": "10:35",
+    "type": "weather",
+    "message": "Rain expected in 15 minutes, reducing speed"
+  }
+]
