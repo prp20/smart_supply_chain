@@ -36,3 +36,5 @@ services:
     build: ./services/traffic_api
     ports:
       - "8003:8003"
+
+  

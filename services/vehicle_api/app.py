@@ -3,8 +3,29 @@ from fastapi.middleware.cors import CORSMiddleware
 import json
 from ai_engine import generate_decisions
 import random
+import requests
+
+OSRM_URL = "https://router.project-osrm.org/route/v1/driving"
 
 app = FastAPI()
+
+def get_route(start, end):
+    coords = f"{start['lng']},{start['lat']};{end['lng']},{end['lat']}"
+    url = f"{OSRM_URL}/{coords}?overview=full&geometries=geojson&steps=true"
+
+    res = requests.get(url).json()
+    route = res["routes"][0]
+
+    return {
+        "distance_km": route["distance"] / 1000,
+        "duration_min": route["duration"] / 60,
+        "geometry": route["geometry"]["coordinates"],
+        "steps": [
+            step["maneuver"]["location"]
+            for leg in route["legs"]
+            for step in leg["steps"]
+        ]
+    }
 
 app.add_middleware(
     CORSMiddleware,
@@ -29,6 +50,10 @@ def get_vehicles():
 def get_routes():
     with open("routes.json", "r") as r:
         return json.load(r)
+
+@app.post("/cal_route")
+def calculate_route(data: dict):
+    return get_route(data["start"], data["end"])
 
 # --- Traffic endpoint ---
 @app.get("/traffic")

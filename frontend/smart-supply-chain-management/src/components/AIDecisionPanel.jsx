@@ -3,7 +3,7 @@ import axios from "axios"
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:8001"
 
-export default function AIDecisionPanel() {
+export default function AIDecisionPanel({ metrics }) {
   const [decisions, setDecisions] = useState([])
 
   useEffect(() => {
@@ -23,6 +23,19 @@ export default function AIDecisionPanel() {
     <div style={panelStyle}>
       <h3>🧠 AI Decision Timeline</h3>
 
+      {/* 🔹 NEW Impact Analysis Section */}
+      {metrics && (
+        <div style={impactStyle}>
+          <h4>📊 Impact Analysis</h4>
+          <p><b>Reason:</b> {metrics.reason}</p>
+          <p>📏 Original Distance: {metrics.originalDistance} km</p>
+          <p>🛣 New Distance: {metrics.newDistance} km</p>
+          <p>📉 Distance Saved: {metrics.distanceDelta} km</p>
+          <p>⏱ Time Saved: {metrics.estimatedTimeSaved} mins</p>
+        </div>
+      )}
+
+      {/* 🔹 Existing Timeline */}
       {decisions.map((d, i) => (
         <div key={i} style={eventStyle(d.type)}>
           <strong>{d.time}</strong> — {d.message}
@@ -47,7 +60,6 @@ const panelStyle = {
   borderRadius: "8px",
   boxShadow: "0 0 10px rgba(0,0,0,0.5)",
   zIndex: 1000,
-  transition: "all 0.3s ease",
 }
 
 const eventStyle = (type) => ({
@@ -61,3 +73,11 @@ const eventStyle = (type) => ({
       ? "#1f3c7a"
       : "#1f7a3c",
 })
+
+const impactStyle = {
+  background: "#222",
+  padding: "10px",
+  marginBottom: "12px",
+  borderRadius: "6px",
+  border: "1px solid #333",
+}
