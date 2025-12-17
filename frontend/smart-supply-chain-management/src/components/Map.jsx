@@ -12,6 +12,7 @@ import RouteLayer from "./RouteLayer"
 import { isTrafficAhead } from "../utils/trafficDetection"
 import { generateAlternateRoute } from "../utils/reroute"
 import { calculateRouteDistance } from "../utils/routeMetrics"
+import RouteTrafficLayer from "./RouteTrafficLayer"
 
 window.L = L
 
@@ -30,51 +31,121 @@ export default function Map() {
   const [vehicleIndex, setVehicleIndex] = useState(0)
   const [isRerouted, setIsRerouted] = useState(false)
   const [originalRoute, setOriginalRoute] = useState(null)
+  const [reroutedRoute, setReroutedRoute] = useState(null)
   const [metrics, setMetrics] = useState(null)
+  const [isTrafficDetected, setIsTrafficDetected] = useState(false)
+
 
   useEffect(() => {
     axios.get(`${API}/new_vehicles`).then(res => setVehicles(res.data))
-    axios.get(`${API}/traffic`).then(res => setTraffic(res.data))
+    axios.get('http://localhost:8003/traffic').then(res => setTraffic(res.data))
     axios.get(`${API}/weather`).then(res => setWeather(res.data))
     axios.post(`${API}/cal_route`, {
       start: { lat: 12.9716, lng: 77.5946 },
       end: { lat: 12.9352, lng: 77.6245 },
     }).then(res => {
       setRoute(res.data)
-      setOriginalRoute(res.data) // SAVE original
-    })
+      setOriginalRoute(res.data)
+      return axios.post(`${API}/route_traffic`, res.data)
+      })
+      .then(res => setTraffic(res.data)) // SAVE original
   }, [])
+    useEffect(() => {
+      if (!route || traffic.length === 0) return
 
-  useEffect(() => {
-    if (!route || !originalRoute || isRerouted) return
+      const interval = setInterval(() => {
+        console.log("🚚 Vehicle index:", vehicleIndex)
+        console.log("🚦 Traffic points:", traffic.slice(0, 3))
 
-    const interval = setInterval(() => {
-      if (isTrafficAhead(vehicleIndex, route, traffic)) {
+        const detected = isTrafficAhead(
+          vehicleIndex,
+          route,
+          traffic
+        )
 
-        const newRoute = generateAlternateRoute(route)
+        if (detected && !isTrafficDetected) {
+          console.log("🚨 TRAFFIC DETECTED AHEAD")
+          setIsTrafficDetected(true)
+        }
+      }, 500)
 
-        const originalDistance = calculateRouteDistance(originalRoute.geometry)
-        const newDistance = calculateRouteDistance(newRoute.geometry)
+      return () => clearInterval(interval)
+    }, [vehicleIndex, route, traffic])
+    useEffect(() => {
+  if (
+    !isTrafficDetected ||
+    !route ||
+    !originalRoute ||
+    isRerouted
+  ) return
 
-        const avgSpeedKmH = 40 // truck avg
-        const timeSaved =
-          ((originalDistance - newDistance) / avgSpeedKmH) * 60 // minutes
+  console.log("🔁 REROUTING NOW...")
 
-        setMetrics({
-          originalDistance: originalDistance.toFixed(2),
-          newDistance: newDistance.toFixed(2),
-          distanceDelta: (originalDistance - newDistance).toFixed(2),
-          estimatedTimeSaved: timeSaved.toFixed(1),
-          reason: "Heavy traffic detected ahead"
-        })
+  const newRoute = generateAlternateRoute(route)
 
-        setRoute(newRoute)
-        setIsRerouted(true)
-      }
-    }, 2000)
+  // 📏 Metrics
+  const originalDistance = calculateRouteDistance(originalRoute.geometry)
+  const newDistance = calculateRouteDistance(newRoute.geometry)
 
-    return () => clearInterval(interval)
-  }, [route, traffic, vehicleIndex])
+  const avgSpeedKmH = 40
+  const timeSaved =
+    ((originalDistance - newDistance) / avgSpeedKmH) * 60
+
+  setMetrics({
+    originalDistance: originalDistance.toFixed(2),
+    newDistance: newDistance.toFixed(2),
+    distanceDelta: (originalDistance - newDistance).toFixed(2),
+    estimatedTimeSaved: timeSaved.toFixed(1),
+    reason: "Heavy traffic detected ahead",
+  })
+
+  // 🔁 SWITCH ROUTE
+  setVehicleIndex(0)
+  setRoute(newRoute)
+  setReroutedRoute(newRoute)
+  setIsRerouted(true)
+
+}, [isTrafficDetected])
+
+
+
+
+
+
+
+
+
+  // useEffect(() => {
+  //   if (!route || !originalRoute || isRerouted) return
+
+  //   const interval = setInterval(() => {
+  //     if (isTrafficAhead(vehicleIndex, route, traffic)) {
+  //       const newRoute = generateAlternateRoute(route)
+
+  //       const originalDistance = calculateRouteDistance(originalRoute.geometry)
+  //       const newDistance = calculateRouteDistance(newRoute.geometry)
+
+  //       const avgSpeedKmH = 40
+  //       const timeSaved =
+  //         ((originalDistance - newDistance) / avgSpeedKmH) * 60
+
+  //       setMetrics({
+  //         originalDistance: originalDistance.toFixed(2),
+  //         newDistance: newDistance.toFixed(2),
+  //         distanceDelta: (originalDistance - newDistance).toFixed(2),
+  //         estimatedTimeSaved: timeSaved.toFixed(1),
+  //         reason: "Heavy traffic detected ahead"
+  //       })
+
+  //       setVehicleIndex(0)          // ✅ RESET INDEX
+  //       setRoute(newRoute)
+  //       setReroutedRoute(newRoute)
+  //       setIsRerouted(true)
+  //     }
+  //         }, 2000)
+
+  //   return () => clearInterval(interval)
+  // }, [route, traffic, vehicleIndex])
 
   // useEffect(() => {
   //   const interval = setInterval(() => {
@@ -109,10 +180,25 @@ export default function Map() {
       zoom={13}
       style={{ height: "100vh", width: "100vw" }}
     >
-      <AIDecisionPanel metrics={metrics} />
+      {/* <AIDecisionPanel metrics={metrics} /> */}
       <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-      {route && <RouteLayer route={route} />}
-      {traffic.length > 0 && <TrafficHeatmap points={traffic} />}
+      {originalRoute && (
+  <RouteLayer
+    route={originalRoute}
+    color="#444"
+    weight={4}
+    opacity={0.4}
+  />
+)}
+
+{route && (
+  <RouteLayer
+    route={route}
+    color={isRerouted ? "lime" : "blue"}
+    weight={6}
+  />
+)}
+      {traffic.length > 0 && <RouteTrafficLayer traffic={traffic} />}
       {weather && <WeatherLayer weather={weather} />}
       {weather && <TemperatureOverlay temp={weather.temperature} />}
 

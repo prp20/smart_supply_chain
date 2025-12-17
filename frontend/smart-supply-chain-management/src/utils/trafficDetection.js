@@ -1,26 +1,28 @@
-export function isTrafficAhead(vehicleIndex, route, trafficPoints) {
-  if (!route || !trafficPoints.length) return false
+export function isTrafficAhead(
+  vehicleIndex,
+  route,
+  traffic,
+  lookAheadPoints = 20
+) {
+  if (!route?.geometry?.length || !traffic?.length) return false
 
-  const lookAheadDistance = 15 // number of route points ahead
-
-  const upcomingRoutePoints = route.geometry.slice(
+  const upcomingRoute = route.geometry.slice(
     vehicleIndex,
-    vehicleIndex + lookAheadDistance
+    vehicleIndex + lookAheadPoints
   )
 
-  for (const traffic of trafficPoints) {
-    for (const point of upcomingRoutePoints) {
-      const [lng, lat] = point
+  return traffic.some(t => {
+    // ✅ SUPPORT BOTH FORMATS
+    const lat = t.lat ?? t.location?.[1]
+    const lng = t.lng ?? t.location?.[0]
 
-      const distance =
-        Math.abs(lat - traffic.lat) +
-        Math.abs(lng - traffic.lng)
+    if (lat == null || lng == null) return false
 
-      if (distance < 0.0005) {
-        return true
-      }
-    }
-  }
+    return upcomingRoute.some(([rLng, rLat]) => {
+      const dLat = Math.abs(rLat - lat)
+      const dLng = Math.abs(rLng - lng)
 
-  return false
+      return dLat < 0.0004 && dLng < 0.0004
+    })
+  })
 }

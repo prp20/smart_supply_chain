@@ -15,10 +15,14 @@ export default function TrafficHeatmap({ points }) {
     ])
 
     const heatLayer = window.L.heatLayer(heatPoints, {
-      radius: 40,
-      blur: 25,
+      radius: 35,
+      blur: 20,
       maxZoom: 17,
-      minOpacity: 0.5,
+      gradient: {
+        0.4: "yellow",
+        0.7: "orange",
+        1.0: "red"
+      }
     })
 
     heatLayer.addTo(map)

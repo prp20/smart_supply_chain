@@ -55,6 +55,31 @@ def get_routes():
 def calculate_route(data: dict):
     return get_route(data["start"], data["end"])
 
+@app.post("/route_traffic")
+def generate_route_traffic(route: dict):
+    geometry = route.get("geometry", [])
+
+    if not geometry:
+        return []
+
+    traffic_points = []
+
+    # Inject traffic between 30%–50% of route
+    start_idx = int(len(geometry) * 0.3)
+    end_idx = int(len(geometry) * 0.5)
+
+    for i in range(start_idx, end_idx):
+        lng, lat = geometry[i]
+
+        traffic_points.append({
+            "lat": lat,
+            "lng": lng,
+            "intensity": round(random.uniform(0.7, 1.0), 2),
+            "type": "congestion"
+        })
+
+    return traffic_points
+
 # --- Traffic endpoint ---
 @app.get("/traffic")
 def get_traffic():

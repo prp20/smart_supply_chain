@@ -21,14 +21,16 @@ export default function MovingVehicleRoute({
     }, 1000)
 
     return () => clearInterval(interval)
-  }, [route])
+  }, [route]) // 👈 re-runs cleanly on route switch
 
   if (!route || !route.geometry || route.geometry.length === 0) {
     return null
   }
 
   const point = route.geometry[vehicleIndex]
-  const position = [point[1], point[0]]
+  if (!point) return null   // 🛡️ safety guard
+
+  const position = [point[1], point[0]] // lat, lng
 
   return <Marker position={position} icon={icon} />
 }
