@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import json
+from ai_engine import generate_decisions
+import random
 
 app = FastAPI()
 
@@ -37,8 +39,23 @@ def get_traffic():
 # --- AI Decisions endpoint ---
 @app.get("/decisions")
 def get_decisions():
-    with open("decisions.json", "r") as d:
-        return json.load(d)
+    # mock traffic
+    traffic = [
+        {"lat": 12.97, "lng": 77.59, "intensity": random.random()}
+        for _ in range(10)
+    ]
+
+    # mock weather
+    weather = {
+        "condition": random.choice(["clear", "rain"]),
+        "temperature": random.randint(20, 35)
+    }
+
+    # mock vehicles
+    vehicles = [{"id": i} for i in range(random.randint(3, 10))]
+
+    decisions = generate_decisions(traffic, weather, vehicles)
+    return decisions
 
 # --- Weather simulation endpoint (optional) ---
 @app.get("/weather")
@@ -50,3 +67,13 @@ def get_weather():
         {"lat": 12.973, "lng": 77.599}
     ]
     return weather
+
+@app.get('/new_vehicles')
+def get_new_vehicles():
+    with open("temp_vehicles.json") as tv:
+        return json.load(tv)
+    
+@app.get('/weather')
+def get_weather():
+    with open("temperature.json") as tp:
+        return json.load(tp)

@@ -1,12 +1,17 @@
 [
   {
-    "vehicle_id": "V1",
-    "decision": "Rerouted due to traffic",
-    "confidence": 0.91
+    "time": "10:30",
+    "type": "traffic",
+    "message": "Heavy congestion detected near MG Road"
   },
   {
-    "vehicle_id": "V2",
-    "decision": "Delayed pickup due to weather",
-    "confidence": 0.85
+    "time": "10:32",
+    "type": "ai",
+    "message": "AI recommends rerouting Vehicle V2"
+  },
+  {
+    "time": "10:35",
+    "type": "weather",
+    "message": "Rain expected in 15 minutes, reducing speed"
   }
 ]
