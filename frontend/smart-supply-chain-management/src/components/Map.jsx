@@ -1,142 +1,129 @@
-import { MapContainer, TileLayer, Marker, Popup, Polyline } from "react-leaflet"
-import { useState, useEffect, useRef } from "react"
+import { MapContainer, TileLayer, Marker } from "react-leaflet"
+import { useEffect, useState } from "react"
 import axios from "axios"
 import L from "leaflet"
-import AgentPanel from "./AgentPanel"
-import "../App.css"
+import TrafficHeatmap from "./TrafficHeatmap"
+import WeatherLayer from "./WeatherLayer"
+import TemperatureOverlay from "./TemperatureOverlay"
+import MovingVehicle from "./MovingVehicle"
+import MovingVehicleRoute from "./MovingVehicleRoute"
+import AIDecisionPanel from "./AIDecisionPanel"
+import RouteLayer from "./RouteLayer"
+import { isTrafficAhead } from "../utils/trafficDetection"
+import { generateAlternateRoute } from "../utils/reroute"
+import { calculateRouteDistance } from "../utils/routeMetrics"
+
+window.L = L
+
+const API = import.meta.env.VITE_API_URL || "http://localhost:8001"
+
+const vehicleIcon = new L.Icon({
+  iconUrl: "https://cdn-icons-png.flaticon.com/512/854/854878.png",
+  iconSize: [30, 30],
+})
 
 export default function Map() {
   const [vehicles, setVehicles] = useState([])
-  const [routes, setRoutes] = useState([])
   const [traffic, setTraffic] = useState([])
-  const [decisions, setDecisions] = useState([])
-  const [weather, setWeather] = useState([])
+  const [weather, setWeather] = useState(null)
+  const [route, setRoute] = useState(null)
+  const [vehicleIndex, setVehicleIndex] = useState(0)
+  const [isRerouted, setIsRerouted] = useState(false)
+  const [originalRoute, setOriginalRoute] = useState(null)
+  const [metrics, setMetrics] = useState(null)
 
-  const vehiclesRef = useRef([])
-
-  // Fetch vehicles every 2 seconds from backend
   useEffect(() => {
-    const interval = setInterval(async () => {
-      const res = await axios.get("http://localhost:8001/vehicles")
-      // Initialize vehicles with lat/lng if first fetch
-      const updated = res.data.map(v => {
-        const prev = vehiclesRef.current.find(x => x.id === v.id)
-        return {
-          ...v,
-          lat: prev?.lat ?? v.latitude,
-          lng: prev?.lng ?? v.longitude,
-        }
-      })
-      vehiclesRef.current = updated
-      setVehicles(updated)
-    }, 2000)
-    return () => clearInterval(interval)
+    axios.get(`${API}/new_vehicles`).then(res => setVehicles(res.data))
+    axios.get(`${API}/traffic`).then(res => setTraffic(res.data))
+    axios.get(`${API}/weather`).then(res => setWeather(res.data))
+    axios.post(`${API}/cal_route`, {
+      start: { lat: 12.9716, lng: 77.5946 },
+      end: { lat: 12.9352, lng: 77.6245 },
+    }).then(res => {
+      setRoute(res.data)
+      setOriginalRoute(res.data) // SAVE original
+    })
   }, [])
 
-  // Smooth vehicle animation
   useEffect(() => {
-    let animationFrame
+    if (!route || !originalRoute || isRerouted) return
 
-    const animate = () => {
-      setVehicles(prev => {
-        const updated = prev.map(v => {
-          const nextIndex = (v.current_index + 1) % v.route.length
-          const [lat1, lng1] = v.route[v.current_index]
-          const [lat2, lng2] = v.route[nextIndex]
+    const interval = setInterval(() => {
+      if (isTrafficAhead(vehicleIndex, route, traffic)) {
 
-          const t = 0.02 // interpolation factor, smaller = slower
-          const lat = v.lat + (lat2 - lat1) * t
-          const lng = v.lng + (lng2 - lng1) * t
+        const newRoute = generateAlternateRoute(route)
 
-          return { ...v, lat, lng, current_index: nextIndex }
+        const originalDistance = calculateRouteDistance(originalRoute.geometry)
+        const newDistance = calculateRouteDistance(newRoute.geometry)
+
+        const avgSpeedKmH = 40 // truck avg
+        const timeSaved =
+          ((originalDistance - newDistance) / avgSpeedKmH) * 60 // minutes
+
+        setMetrics({
+          originalDistance: originalDistance.toFixed(2),
+          newDistance: newDistance.toFixed(2),
+          distanceDelta: (originalDistance - newDistance).toFixed(2),
+          estimatedTimeSaved: timeSaved.toFixed(1),
+          reason: "Heavy traffic detected ahead"
         })
-        vehiclesRef.current = updated
-        return updated
-      })
-      animationFrame = requestAnimationFrame(animate)
-    }
 
-    animationFrame = requestAnimationFrame(animate)
-    return () => cancelAnimationFrame(animationFrame)
-  }, [])
+        setRoute(newRoute)
+        setIsRerouted(true)
+      }
+    }, 2000)
 
-  // Fetch routes
-  useEffect(() => {
-    axios.get("http://localhost:8001/routes").then(res => setRoutes(res.data))
-  }, [])
+    return () => clearInterval(interval)
+  }, [route, traffic, vehicleIndex])
 
-  // Fetch traffic
-  useEffect(() => {
-    axios.get("http://localhost:8001/traffic").then(res => setTraffic(res.data))
-  }, [])
+  // useEffect(() => {
+  //   const interval = setInterval(() => {
+  //     setVehicles(prev =>
+  //       prev.map(v => {
+  //         if (
+  //           typeof v.lat !== "number" ||
+  //           typeof v.lng !== "number" ||
+  //           typeof v.speed !== "number" ||
+  //           typeof v.bearing !== "number"
+  //         ) {
+  //           return v
+  //         }
 
-  // Fetch AI decisions
-  useEffect(() => {
-    axios.get("http://localhost:8001/decisions").then(res => setDecisions(res.data))
-  }, [])
+  //         const rad = (v.bearing * Math.PI) / 180
 
-  // Fetch weather
-  useEffect(() => {
-    axios.get("http://localhost:8001/weather").then(res => setWeather(res.data))
-  }, [])
+  //         return {
+  //           ...v,
+  //           lat: v.lat + Math.cos(rad) * v.speed,
+  //           lng: v.lng + Math.sin(rad) * v.speed,
+  //         }
+  //       })
+  //     )
+  //   }, 100)
 
-  // Rain icon
-  const rainIcon = L.divIcon({ className: "rain-drop" })
+  //   return () => clearInterval(interval)
+  // }, [])
 
   return (
-    <div style={{ position: "relative" }}>
-      <MapContainer
-        center={[12.9716, 77.5946]}
-        zoom={13}
-        style={{ height: "100vh", width: "100%" }}
-      >
-        <TileLayer
-          attribution="© OpenStreetMap"
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+    <MapContainer
+      center={[12.9716, 77.5946]}
+      zoom={13}
+      style={{ height: "100vh", width: "100vw" }}
+    >
+      <AIDecisionPanel metrics={metrics} />
+      <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+      {route && <RouteLayer route={route} />}
+      {traffic.length > 0 && <TrafficHeatmap points={traffic} />}
+      {weather && <WeatherLayer weather={weather} />}
+      {weather && <TemperatureOverlay temp={weather.temperature} />}
+
+      {route && (
+        <MovingVehicleRoute
+          route={route}
+          icon={vehicleIcon}
+          vehicleIndex={vehicleIndex}
+          setVehicleIndex={setVehicleIndex}
         />
-
-        {/* Weather */}
-        {weather.map((w, i) => (
-          <Marker key={i} position={[w.lat, w.lng]} icon={rainIcon} />
-        ))}
-
-        {/* Traffic */}
-        {traffic.map(t => (
-          <Polyline
-            key={t.segment_id}
-            positions={t.coordinates}
-            color={
-              t.severity === "high"
-                ? "red"
-                : t.severity === "medium"
-                ? "orange"
-                : "green"
-            }
-            weight={6}
-          />
-        ))}
-
-        {/* Routes */}
-        {routes.map(r => (
-          <Polyline key={r.vehicle_id} positions={r.route} color="blue" weight={4} />
-        ))}
-
-        {/* Vehicles */}
-        {vehicles.map(vehicle => (
-          <Marker
-            key={vehicle.id}
-            position={[vehicle.lat, vehicle.lng]}
-          >
-            <Popup>
-              🚚 {vehicle.id} <br />
-              Status: {vehicle.status}
-            </Popup>
-          </Marker>
-        ))}
-      </MapContainer>
-
-      {/* AI Decisions panel */}
-      <AgentPanel decisions={decisions} />
-    </div>
+      )}
+    </MapContainer>
   )
 }

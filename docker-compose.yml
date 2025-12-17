@@ -1,16 +1,16 @@
 version: "3.9"
 
 services:
-  frontend:
-    build: ./frontend/smart-supply-chain-management
-    container_name: logistics-frontend
-    ports:
-      - "5173:5173"
-    volumes:
-      - ./frontend:/app
-    restart: unless-stopped
-    depends_on:
-      - vehicle-api
+  # frontend:
+  #   build: ./frontend/smart-supply-chain-management
+  #   container_name: logistics-frontend
+  #   ports:
+  #     - "5173:5173"
+  #   volumes:
+  #     - ./frontend:/app
+  #   restart: unless-stopped
+  #   depends_on:
+  #     - vehicle-api
   logistics-app:
     build: .
     ports:
@@ -36,3 +36,5 @@ services:
     build: ./services/traffic_api
     ports:
       - "8003:8003"
+
+  
